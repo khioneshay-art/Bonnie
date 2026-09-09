@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "flowroom",
+  "compatibility_date": "2026-08-19",
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    "directory": "."
+  }
+}

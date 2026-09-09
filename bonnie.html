@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d12">
+  <title>BONNIE — Intelligence</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{
+      --bg:#0b0d12;--panel:#11141b;--panel2:#171b23;--line:#272c36;
+      --text:#f5f7fb;--muted:#9ca3b1;--accent:#d8b4fe;--accent2:#a78bfa;
+      --danger:#f87171;--bubble:#191e28;--max:900px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0}
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+    button,input,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{height:100dvh;display:flex}
+    .sidebar{width:285px;flex:0 0 285px;border-right:1px solid var(--line);background:#0e1016;display:flex;flex-direction:column;min-width:0}
+    .brand{height:64px;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid var(--line);gap:10px}
+    .brand-mark{width:30px;height:30px;border:1px solid #4b5563;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:13px}
+    .brand-name{font-weight:700;letter-spacing:.08em}
+    .status{margin-left:auto;width:8px;height:8px;border-radius:50%;background:#64748b}
+    .status.online{background:#34d399}.status.offline{background:#f59e0b}
+    .side-actions{padding:14px}
+    .new-chat{width:100%;padding:11px 13px;border:1px solid #3a4150;background:#171b23;color:var(--text);border-radius:12px;text-align:left;font-weight:650}
+    .new-chat:hover{background:#1d222c}
+    .search{margin:0 14px 12px;position:relative}
+    .search input{width:100%;background:#151820;border:1px solid var(--line);border-radius:10px;color:var(--text);padding:9px 11px;outline:none}
+    .search input:focus{border-color:#50586a}
+    .history{padding:0 8px 12px;overflow:auto;flex:1}
+    .section-label{padding:8px 10px;color:#6f7786;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+    .chat-row{display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:10px;color:#cbd1dc;margin-bottom:2px}
+    .chat-row:hover{background:#151a22}.chat-row.active{background:#1a202a;color:#fff}
+    .chat-title{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+    .chat-menu{border:0;background:transparent;color:#6f7786;padding:2px 5px;opacity:0}
+    .chat-row:hover .chat-menu,.chat-row.active .chat-menu{opacity:1}
+    .side-footer{padding:12px 14px;border-top:1px solid var(--line);color:#737b89;font-size:11px;display:flex;justify-content:space-between;gap:8px}
+    .main{min-width:0;flex:1;display:flex;flex-direction:column;background:var(--bg)}
+    .topbar{height:64px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 18px;gap:10px}
+    .mobile-menu{display:none}
+    .conversation-title{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mode{margin-left:auto;border:1px solid var(--line);background:#12151c;color:#aeb5c1;border-radius:9px;padding:7px 9px;font-size:12px}
+    .messages{flex:1;overflow:auto;scroll-behavior:smooth}
+    .message-wrap{max-width:var(--max);margin:0 auto;padding:22px 24px}
+    .message{display:flex;gap:14px;margin:0 0 25px}
+    .avatar{width:30px;height:30px;flex:0 0 30px;border-radius:10px;border:1px solid #343a46;display:grid;place-items:center;font-size:11px;font-weight:750;color:#cbd5e1}
+    .message.user .avatar{background:#1c2230}.message.assistant .avatar{background:#18141f;border-color:#3d3349;color:var(--accent)}
+    .content{min-width:0;line-height:1.65;font-size:15px;white-space:pre-wrap;overflow-wrap:anywhere}
+    .message.user .content{color:#e7eaf0}
+    .message.assistant .content{color:#f1f3f7}
+    .message-actions{display:flex;gap:6px;margin-top:7px;opacity:0;transition:opacity .15s}
+    .message:hover .message-actions{opacity:1}
+    .mini{font-size:11px;color:#737b89;border:0;background:transparent;padding:3px 5px}
+    .welcome{height:100%;display:grid;place-items:center;padding:30px}
+    .welcome-inner{max-width:650px;text-align:center}
+    .welcome-mark{width:58px;height:58px;margin:0 auto 18px;border:1px solid #414957;border-radius:18px;display:grid;place-items:center;font-weight:850;letter-spacing:.05em}
+    .welcome h1{margin:0 0 9px;font-size:30px}.welcome p{margin:0;color:var(--muted);line-height:1.6}
+    .composer-area{border-top:1px solid var(--line);padding:14px 18px max(14px,env(safe-area-inset-bottom));background:rgba(11,13,18,.94)}
+    .composer{max-width:var(--max);margin:auto;border:1px solid #303642;background:#141821;border-radius:15px;display:flex;align-items:flex-end;padding:8px 8px 8px 13px;gap:8px}
+    textarea{flex:1;resize:none;border:0;outline:0;background:transparent;color:var(--text);min-height:26px;max-height:180px;line-height:1.45;padding:4px 0}
+    textarea::placeholder{color:#6f7786}
+    .send{width:38px;height:38px;border:0;border-radius:11px;background:#f4f5f7;color:#101218;font-weight:800}
+    .send:disabled{opacity:.35;cursor:not-allowed}
+    .composer-note{max-width:var(--max);margin:7px auto 0;color:#5f6775;font-size:10px;text-align:center}
+    .typing{display:inline-flex;gap:4px;align-items:center;color:#858d9b}.dot{width:5px;height:5px;background:#858d9b;border-radius:50%;animation:pulse 1s infinite}.dot:nth-child(2){animation-delay:.15s}.dot:nth-child(3){animation-delay:.3s}
+    @keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
+    .toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);background:#1c212b;border:1px solid #353c49;color:#dce1e9;border-radius:10px;padding:9px 12px;font-size:12px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+    .toast.show{opacity:1}
+    .drawer-backdrop{display:none}
+    @media(max-width:760px){
+      .sidebar{position:fixed;z-index:30;top:0;bottom:0;left:0;transform:translateX(-102%);transition:transform .2s;box-shadow:18px 0 50px rgba(0,0,0,.35)}
+      .sidebar.open{transform:translateX(0)}
+      .drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:29}.drawer-backdrop.show{display:block}
+      .mobile-menu{display:block;border:0;background:transparent;color:#cbd1dc;font-size:20px;padding:5px}
+      .topbar{padding:0 12px}.message-wrap{padding:18px 15px}.message{gap:10px;margin-bottom:22px}.content{font-size:14px}
+      .avatar{width:28px;height:28px;flex-basis:28px}.mode{display:none}
+      .composer-area{padding-left:10px;padding-right:10px}
+      .welcome h1{font-size:25px}
+    }
+    @media(max-height:520px) and (orientation:landscape){
+      .brand,.topbar{height:52px}.composer-area{padding-top:8px}.message-wrap{padding-top:12px;padding-bottom:12px}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="drawer-backdrop" id="backdrop"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">B</div><div class="brand-name">BONNIE</div><div class="status" id="statusDot" title="Local mode"></div>
+    </div>
+    <div class="side-actions"><button class="new-chat" id="newChat">＋ New conversation</button></div>
+    <div class="search"><input id="searchInput" placeholder="Search conversations…" autocomplete="off"></div>
+    <div class="history" id="history"></div>
+    <div class="side-footer"><span id="syncText">Local mode</span><span>v1.0</span></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="mobile-menu" id="mobileMenu" aria-label="Open history">☰</button>
+      <div class="conversation-title" id="conversationTitle">New conversation</div>
+      <select class="mode" id="modeSelect" aria-label="Conversation mode">
+        <option value="chat">Chat</option><option value="business">Business</option>
+        <option value="analysis">Analysis</option><option value="strategy">Strategy</option>
+        <option value="research">Research</option><option value="general">General</option>
+      </select>
+    </header>
+
+    <section class="messages" id="messages"></section>
+
+    <div class="composer-area">
+      <div class="composer">
+        <textarea id="composer" rows="1" placeholder="Ask Bonnie anything…" aria-label="Message Bonnie"></textarea>
+        <button class="send" id="send" aria-label="Send message">↑</button>
+      </div>
+      <div class="composer-note">Enter to send · Shift+Enter for a new line</div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const CONFIG = {
+    supabaseUrl: "https://zmojpxezljwooiloxwdv.supabase.co",
+    supabasePublishableKey: "sb_publishable_TN_HpU6oxVgQx8i8ijI1RA_nUWgaDWB",
+    aiFunctionUrl: "https://zmojpxezljwooiloxwdv.supabase.co/functions/v1/bonnie-ai",
+    localKey: "bonnie.local.v1"
+  };
+
+  const $ = id => document.getElementById(id);
+  const state = {
+    supabase: null, user: null, cloud: false, conversations: [], currentId: null,
+    messages: new Map(), pending: [], busy: false
+  };
+
+  const ui = {
+    sidebar:$("sidebar"), backdrop:$("backdrop"), history:$("history"), messages:$("messages"),
+    title:$("conversationTitle"), mode:$("modeSelect"), composer:$("composer"), send:$("send"),
+    status:$("statusDot"), sync:$("syncText"), search:$("searchInput"), toast:$("toast")
+  };
+
+  function uuid(){ return crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==="x"?r:(r&3)|8;return v.toString(16)}); }
+  function now(){ return new Date().toISOString(); }
+  function esc(s){ return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+  function toast(text){ui.toast.textContent=text;ui.toast.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>ui.toast.classList.remove("show"),2600);}
+  function saveLocal(){ localStorage.setItem(CONFIG.localKey, JSON.stringify({conversations:state.conversations,messages:Object.fromEntries(state.messages),pending:state.pending})); }
+  function loadLocal(){
+    try{
+      const d=JSON.parse(localStorage.getItem(CONFIG.localKey)||"{}");
+      state.conversations=Array.isArray(d.conversations)?d.conversations:[];
+      state.messages=new Map(Object.entries(d.messages||{}));
+      state.pending=Array.isArray(d.pending)?d.pending:[];
+    }catch{state.conversations=[];state.messages=new Map();state.pending=[];}
+  }
+  function setStatus(cloud){
+    state.cloud=cloud;ui.status.className="status "+(cloud?"online":"offline");
+    ui.status.title=cloud?"Cloud persistence active":"Local fallback mode";
+    ui.sync.textContent=cloud?"Cloud synced":"Local mode";
+  }
+  function titleFrom(text){
+    const clean=text.replace(/\s+/g," ").trim();
+    if(!clean) return "New conversation";
+    const words=clean.replace(/[^\w\s?'-]/g,"").split(/\s+/).slice(0,7);
+    let t=words.join(" ");
+    if(t.length>42)t=t.slice(0,42).replace(/\s+\S*$/,"");
+    return t.charAt(0).toUpperCase()+t.slice(1);
+  }
+  function current(){return state.conversations.find(c=>c.id===state.currentId)||null;}
+
+  function renderHistory(){
+    const q=ui.search.value.trim().toLowerCase();
+    const list=state.conversations.filter(c=>(c.title||"").toLowerCase().includes(q)).sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at));
+    ui.history.innerHTML=`<div class="section-label">${q?"Results":"Recent"}</div>`+
+      (list.length?list.map(c=>`<div class="chat-row ${c.id===state.currentId?"active":""}" data-id="${esc(c.id)}">
+        <div class="chat-title">${esc(c.title||"New conversation")}</div>
+        <button class="chat-menu" data-action="menu" aria-label="Conversation options">•••</button>
+      </div>`).join(""):`<div style="padding:18px 12px;color:#6f7786;font-size:12px">No conversations yet.</div>`);
+  }
+
+  function renderMessages(){
+    const msgs=state.messages.get(state.currentId)||[];
+    if(!msgs.length){
+      ui.messages.innerHTML=`<div class="welcome"><div class="welcome-inner">
+        <div class="welcome-mark">B</div><h1>How can I help?</h1>
+        <p>Ask Bonnie about strategy, analysis, research, business decisions, or anything you want to think through.</p>
+      </div></div>`;
+      return;
+    }
+    ui.messages.innerHTML=`<div class="message-wrap">${msgs.map((m,i)=>`
+      <article class="message ${m.role}">
+        <div class="avatar">${m.role==="user"?"YOU":"B"}</div>
+        <div style="min-width:0;flex:1">
+          <div class="content">${esc(m.content)}</div>
+          ${m.role==="assistant"?`<div class="message-actions"><button class="mini" data-copy="${i}">Copy</button></div>`:""}
+        </div>
+      </article>`).join("")}</div>`;
+    ui.messages.scrollTop=ui.messages.scrollHeight;
+  }
+
+  function ensureConversation(){
+    if(state.currentId && current()) return current();
+    const c={id:uuid(),user_id:state.user?.id||null,title:"New conversation",mode:"chat",business_id:null,business_name:null,created_at:now(),updated_at:now(),local:true};
+    state.conversations.unshift(c); state.messages.set(c.id,[]); state.currentId=c.id; saveLocal(); renderHistory(); renderMessages(); return c;
+  }
+
+  async function initSupabase(){
+    try{
+      state.supabase=window.supabase.createClient(CONFIG.supabaseUrl,CONFIG.supabasePublishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+      const {data}=await state.supabase.auth.getSession();
+      state.user=data?.session?.user||null;
+      if(state.user){ setStatus(true); await loadCloud(); await syncPending(); }
+      else setStatus(false);
+    }catch(e){ console.warn("Supabase unavailable",e); setStatus(false); }
+  }
+
+  async function loadCloud(){
+    if(!state.user) return;
+    const {data,error}=await state.supabase.from("bonnie_conversations").select("*").order("updated_at",{ascending:false});
+    if(error){console.warn(error);setStatus(false);return;}
+    state.conversations=(data||[]).map(c=>({...c,local:false}));
+    if(state.conversations.length){state.currentId=state.conversations[0].id;await loadMessages(state.currentId);}
+    else ensureConversation();
+    renderHistory();renderMessages();
+  }
+  async function loadMessages(id){
+    if(!state.cloud || !state.user) return;
+    const {data,error}=await state.supabase.from("bonnie_messages").select("*").eq("conversation_id",id).order("created_at",{ascending:true});
+    if(error){console.warn(error);return;}
+    state.messages.set(id,data||[]);renderMessages();
+  }
+
+  async function createCloudConversation(c){
+    if(!state.user||!state.supabase) return null;
+    const payload={user_id:state.user.id,title:c.title,mode:c.mode,business_id:c.business_id,business_name:c.business_name};
+    const {data,error}=await state.supabase.from("bonnie_conversations").insert(payload).select().single();
+    if(error) throw error;
+    return {...data,local:false};
+  }
+
+  async function ensureCloudConversation(c){
+    if(!state.user||!state.supabase) return c;
+    if(!c.local) return c;
+    const cloud=await createCloudConversation(c);
+    state.conversations=state.conversations.map(x=>x.id===c.id?cloud:x);
+    const old=state.messages.get(c.id)||[];
+    if(old.length){
+      await state.supabase.from("bonnie_messages").insert(old.map(m=>({conversation_id:cloud.id,user_id:state.user.id,role:m.role,content:m.content,created_at:m.created_at})));
+      state.messages.set(cloud.id,old); state.messages.delete(c.id);
+    } else state.messages.set(cloud.id,[]);
+    state.currentId=cloud.id;
+    saveLocal();return cloud;
+  }
+
+  async function addCloudMessage(c,msg){
+    if(!state.cloud||!state.user) return;
+    const {error}=await state.supabase.from("bonnie_messages").insert({conversation_id:c.id,user_id:state.user.id,role:msg.role,content:msg.content});
+    if(error) throw error;
+    await state.supabase.from("bonnie_conversations").update({updated_at:now()}).eq("id",c.id).eq("user_id",state.user.id);
+  }
+
+  async function sendAI(c){
+    const msgs=(state.messages.get(c.id)||[]).slice(-24).map(m=>({role:m.role,content:m.content}));
+    const memory=await getRelevantMemory(msgs.at(-1)?.content||"");
+    const res=await fetch(CONFIG.aiFunctionUrl,{method:"POST",headers:{
+      "Content-Type":"application/json",
+      ...(state.supabase?.auth?{}:{})
+    },body:JSON.stringify({conversation_id:c.id,mode:c.mode,messages:msgs,memory,business:{id:c.business_id,name:c.business_name}})});
+    if(!res.ok){let detail="";try{detail=(await res.json()).error||""}catch{};throw new Error(detail||`AI request failed (${res.status})`);}
+    const data=await res.json();if(!data.content)throw new Error("Empty AI response");return data.content;
+  }
+
+  async function getRelevantMemory(query){
+    if(!state.user||!state.supabase) return [];
+    const {data}=await state.supabase.from("bonnie_memory").select("*").eq("user_id",state.user.id).order("updated_at",{ascending:false}).limit(50);
+    if(!data?.length)return [];
+    const terms=(query.toLowerCase().match(/[a-z0-9]{4,}/g)||[]).slice(0,12);
+    return data.filter(m=>terms.some(t=>m.content.toLowerCase().includes(t))).slice(0,8).map(m=>({type:m.memory_type,content:m.content,confidence:m.confidence}));
+  }
+
+  async function saveExplicitMemory(text){
+    if(!state.user||!state.supabase) return false;
+    const content=text.replace(/^remember\s*:\s*/i,"").trim();if(!content)return false;
+    const {error}=await state.supabase.from("bonnie_memory").insert({user_id:state.user.id,memory_type:"user_defined",content,source:"explicit user instruction",confidence:1});
+    if(error)throw error;return true;
+  }
+
+  async function handleSend(){
+    const text=ui.composer.value.trim();if(!text||state.busy)return;
+    let c=ensureConversation();
+    if(state.cloud && c.local){try{c=await ensureCloudConversation(c)}catch(e){setStatus(false);toast("Cloud unavailable — continuing locally.");}}
+    const arr=state.messages.get(c.id)||[];
+    const userMsg={id:uuid(),conversation_id:c.id,user_id:state.user?.id||null,role:"user",content:text,created_at:now()};
+    arr.push(userMsg);state.messages.set(c.id,arr);
+    if(c.title==="New conversation"){c.title=titleFrom(text);c.updated_at=now();ui.title.textContent=c.title;renderHistory();}
+    ui.composer.value="";resizeComposer();renderMessages();saveLocal();
+    if(/^remember\s*:/i.test(text)){try{if(await saveExplicitMemory(text))toast("Saved to Bonnie memory.");}catch{toast("Memory could not be saved.");}}
+    state.busy=true;ui.send.disabled=true;
+    const typing={id:uuid(),role:"assistant",content:"",typing:true};arr.push(typing);renderMessages();
+    try{
+      const content=await sendAI(c);
+      arr.pop();const assistant={id:uuid(),conversation_id:c.id,user_id:state.user?.id||null,role:"assistant",content,created_at:now()};arr.push(assistant);
+      c.updated_at=now();state.messages.set(c.id,arr);renderMessages();saveLocal();
+      if(state.cloud)await addCloudMessage(c,userMsg).then(()=>addCloudMessage(c,assistant));
+    }catch(e){
+      arr.pop();arr.push({id:uuid(),role:"assistant",content:"Bonnie couldn't complete that response. Please try again.",error:true,created_at:now()});
+      state.messages.set(c.id,arr);renderMessages();saveLocal();toast(e.message||"AI request failed");
+    }finally{state.busy=false;ui.send.disabled=false;}
+  }
+
+  async function syncPending(){
+    // Pending records are reserved for future offline queue expansion.
+    // Current local conversations are promoted automatically when a session becomes available.
+    if(!state.user||!state.cloud)return;
+    for(const c of [...state.conversations]){
+      if(c.local){try{await ensureCloudConversation(c)}catch(e){console.warn("sync",e);break;}}
+    }
+    renderHistory();
+  }
+
+  async function selectConversation(id){
+    state.currentId=id;const c=current();if(!c)return;
+    ui.title.textContent=c.title||"New conversation";ui.mode.value=c.mode||"chat";
+    if(state.cloud&&!c.local)await loadMessages(id);else renderMessages();
+    closeDrawer();
+  }
+  async function renameConversation(c){
+    const name=prompt("Rename conversation",c.title||"New conversation");if(name===null)return;
+    const title=name.trim()||"New conversation";c.title=title;c.updated_at=now();renderHistory();ui.title.textContent=title;saveLocal();
+    if(state.cloud&&!c.local)await state.supabase.from("bonnie_conversations").update({title,updated_at:now()}).eq("id",c.id).eq("user_id",state.user.id);
+  }
+  async function deleteConversation(c){
+    if(!confirm(`Delete “${c.title}”?`))return;
+    if(state.cloud&&!c.local){
+      const {error}=await state.supabase.from("bonnie_conversations").delete().eq("id",c.id).eq("user_id",state.user.id);
+      if(error){toast("Couldn't delete conversation.");return;}
+    }
+    state.conversations=state.conversations.filter(x=>x.id!==c.id);state.messages.delete(c.id);
+    state.currentId=state.conversations[0]?.id||null;if(!state.currentId)ensureConversation();
+    saveLocal();renderHistory();renderMessages();ui.title.textContent=current()?.title||"New conversation";
+  }
+
+  function resizeComposer(){ui.composer.style.height="auto";ui.composer.style.height=Math.min(ui.composer.scrollHeight,180)+"px";}
+  function openDrawer(){ui.sidebar.classList.add("open");ui.backdrop.classList.add("show")}
+  function closeDrawer(){ui.sidebar.classList.remove("open");ui.backdrop.classList.remove("show")}
+
+  $("newChat").onclick=()=>{const c={id:uuid(),user_id:state.user?.id||null,title:"New conversation",mode:ui.mode.value,business_id:null,business_name:null,created_at:now(),updated_at:now(),local:true};state.conversations.unshift(c);state.messages.set(c.id,[]);state.currentId=c.id;ui.title.textContent=c.title;saveLocal();renderHistory();renderMessages();closeDrawer();}
+  $("mobileMenu").onclick=openDrawer;ui.backdrop.onclick=closeDrawer;ui.search.oninput=renderHistory;
+  ui.mode.onchange=()=>{const c=current();if(!c)return;c.mode=ui.mode.value;c.updated_at=now();saveLocal();if(state.cloud&&!c.local)state.supabase.from("bonnie_conversations").update({mode:c.mode,updated_at:now()}).eq("id",c.id).eq("user_id",state.user.id);}
+  ui.send.onclick=handleSend;
+  ui.composer.addEventListener("input",resizeComposer);
+  ui.composer.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();handleSend();}});
+  ui.history.addEventListener("click",e=>{const row=e.target.closest(".chat-row");if(!row)return;const c=current();if(e.target.closest("[data-action=menu]")){const target=state.conversations.find(x=>x.id===row.dataset.id);if(target)renameConversation(target);return;}selectConversation(row.dataset.id);});
+  ui.messages.addEventListener("click",e=>{const b=e.target.closest("[data-copy]");if(!b)return;const i=Number(b.dataset.copy),m=(state.messages.get(state.currentId)||[])[i];if(m)navigator.clipboard?.writeText(m.content).then(()=>toast("Copied."));});
+
+  loadLocal();renderHistory();ensureConversation();renderMessages();initSupabase();
+})();
+</script>
+</body>
+</html>
