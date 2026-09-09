@@ -1,2 +1,5 @@
-# Optional: Cloudflare Pages does not require this file.
-# Keep deployment simple: upload this static project with no build step.
+name = "bonnie"
+compatibility_date = "2026-09-08"
+
+[assets]
+directory = "."
